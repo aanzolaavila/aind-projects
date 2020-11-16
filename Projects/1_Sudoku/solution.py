@@ -73,8 +73,19 @@ def eliminate(values):
     dict
         The values dictionary with the assigned values eliminated from peers
     """
-    # TODO: Copy your code from the classroom to complete this function
-    raise NotImplementedError
+    new_values = dict()
+
+    for position, value in values.items():
+        peers_positions = peers[position]
+
+        single_value_peers = set(values[e] for e in peers_positions \
+                                 if len(values[e]) == 1)
+
+        clean_value = ''.join([e for e in value if e not in single_value_peers])
+
+        new_values[position] = clean_value
+
+    return new_values
 
 
 def only_choice(values):
@@ -97,8 +108,15 @@ def only_choice(values):
     -----
     You should be able to complete this function by copying your code from the classroom
     """
-    # TODO: Copy your code from the classroom to complete this function
-    raise NotImplementedError
+    new_values = dict(values)
+
+    for unit in unitlist:
+        for digit in '123456789':
+            dplaces = [box for box in unit if digit in values[box]]
+            if len(dplaces) == 1:
+                new_values[dplaces[0]] = digit
+
+    return new_values
 
 
 def reduce_puzzle(values):
@@ -115,8 +133,23 @@ def reduce_puzzle(values):
         The values dictionary after continued application of the constraint strategies
         no longer produces any changes, or False if the puzzle is unsolvable 
     """
-    # TODO: Copy your code from the classroom and modify it to complete this function
-    raise NotImplementedError
+    stalled = False
+    while not stalled:
+        # Check how many boxes have a determined value
+        solved_values_before = len([box for box in values.keys() if len(values[box]) == 1])
+
+        values = eliminate(values)
+
+        values = only_choice(values)
+
+        # Check how many boxes have a determined value, to compare
+        solved_values_after = len([box for box in values.keys() if len(values[box]) == 1])
+        # If no new values were added, stop the loop.
+        stalled = solved_values_before == solved_values_after
+        # Sanity check, return False if there is a box with zero available values:
+        if len([box for box in values.keys() if len(values[box]) == 0]):
+            return False
+    return values
 
 
 def search(values):
@@ -138,8 +171,30 @@ def search(values):
     You should be able to complete this function by copying your code from the classroom
     and extending it to call the naked twins strategy.
     """
-    # TODO: Copy your code from the classroom to complete this function
-    raise NotImplementedError
+    new_values = reduce_puzzle(values)
+    if new_values is False:
+        return new_values
+
+    # Choose one of the unfilled squares with the fewest possibilities
+    position_lenghts = [(position, len(value)) for position, value in values.items() if len(value) > 1]
+    position_lenghts.sort(key=lambda x: x[1])
+
+    if len(position_lenghts) == 0:
+        return values
+
+    found = False
+    while found is False and len(position_lenghts) > 0:
+        choice_position = position_lenghts.pop(0)[0]
+        i = 0
+        choice_value = values[choice_position]
+        while found is False and i < len(choice_value):
+            chosen_value = choice_value[i]
+            new_values = values.copy()
+            new_values[choice_position] = chosen_value
+            found = search(new_values)
+            i += 1
+
+    return found
 
 
 def solve(grid):
