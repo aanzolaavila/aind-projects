@@ -1,15 +1,13 @@
-
 from utils import *
-
 
 row_units = [cross(r, cols) for r in rows]
 column_units = [cross(rows, c) for c in cols]
-square_units = [cross(rs, cs) for rs in ('ABC','DEF','GHI') for cs in ('123','456','789')]
+square_units = [cross(rs, cs) for rs in ('ABC', 'DEF', 'GHI') for cs in ('123', '456', '789')]
 unitlist = row_units + column_units + square_units
 
-# TODO: Update the unit list to add the new diagonal units
-unitlist = unitlist
-
+diagonal_units = [[a + b for a, b in zip('ABCDEFGHI', '123456789')],
+                  [a + b for a, b in zip('ABCDEFGHI'[::-1], '123456789')]]
+unitlist = unitlist + diagonal_units
 
 # Must be called after all units (including diagonals) are added to the unitlist
 units = extract_units(unitlist, boxes)
@@ -53,8 +51,16 @@ def naked_twins(values):
     Pseudocode for this algorithm on github:
     https://github.com/udacity/artificial-intelligence/blob/master/Projects/1_Sudoku/pseudocode.md
     """
-    # TODO: Implement this function!
-    raise NotImplementedError
+    out = values.copy()
+    for boxA in values.keys():
+        for boxB in peers[boxA]:
+            if len(values[boxA]) == 2 and sorted(values[boxA]) == sorted(values[boxB]):
+                for peer in [peer for peer in peers[boxA] if peer in peers[boxB]]:
+                    for digit in values[boxA]:
+                        new_value = out[peer].replace(digit, '')
+                        out[peer] = new_value
+
+    return out
 
 
 def eliminate(values):
@@ -142,6 +148,8 @@ def reduce_puzzle(values):
 
         values = only_choice(values)
 
+        values = naked_twins(values)
+
         # Check how many boxes have a determined value, to compare
         solved_values_after = len([box for box in values.keys() if len(values[box]) == 1])
         # If no new values were added, stop the loop.
@@ -225,6 +233,7 @@ if __name__ == "__main__":
 
     try:
         import PySudoku
+
         PySudoku.play(grid2values(diag_sudoku_grid), result, history)
 
     except SystemExit:
