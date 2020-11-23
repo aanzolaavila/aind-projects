@@ -1,3 +1,5 @@
+import itertools
+
 from utils import *
 
 row_units = [cross(r, cols) for r in rows]
@@ -6,7 +8,7 @@ square_units = [cross(rs, cs) for rs in ('ABC', 'DEF', 'GHI') for cs in ('123', 
 unitlist = row_units + column_units + square_units
 
 diagonal_units = [[a + b for a, b in zip('ABCDEFGHI', '123456789')],
-                  [a + b for a, b in zip('ABCDEFGHI'[::-1], '123456789')]]
+                  [a + b for a, b in zip('ABCDEFGHI', '123456789'[::-1])]]
 unitlist = unitlist + diagonal_units
 
 # Must be called after all units (including diagonals) are added to the unitlist
@@ -79,19 +81,15 @@ def eliminate(values):
     dict
         The values dictionary with the assigned values eliminated from peers
     """
-    new_values = dict()
 
     for position, value in values.items():
         peers_positions = peers[position]
 
-        single_value_peers = set(values[e] for e in peers_positions \
-                                 if len(values[e]) == 1)
-
+        single_value_peers = set(values[e] for e in peers_positions if len(values[e]) == 1)
         clean_value = ''.join([e for e in value if e not in single_value_peers])
+        values[position] = clean_value
 
-        new_values[position] = clean_value
-
-    return new_values
+    return values
 
 
 def only_choice(values):
@@ -114,15 +112,14 @@ def only_choice(values):
     -----
     You should be able to complete this function by copying your code from the classroom
     """
-    new_values = dict(values)
 
     for unit in unitlist:
         for digit in '123456789':
             dplaces = [box for box in unit if digit in values[box]]
             if len(dplaces) == 1:
-                new_values[dplaces[0]] = digit
+                values[dplaces[0]] = digit
 
-    return new_values
+    return values
 
 
 def reduce_puzzle(values):
@@ -145,16 +142,11 @@ def reduce_puzzle(values):
         solved_values_before = len([box for box in values.keys() if len(values[box]) == 1])
 
         values = eliminate(values)
-
         values = only_choice(values)
-
         values = naked_twins(values)
-
-        # Check how many boxes have a determined value, to compare
         solved_values_after = len([box for box in values.keys() if len(values[box]) == 1])
-        # If no new values were added, stop the loop.
         stalled = solved_values_before == solved_values_after
-        # Sanity check, return False if there is a box with zero available values:
+
         if len([box for box in values.keys() if len(values[box]) == 0]):
             return False
     return values
@@ -181,18 +173,18 @@ def search(values):
     """
     new_values = reduce_puzzle(values)
     if new_values is False:
-        return new_values
+        return False
 
     # Choose one of the unfilled squares with the fewest possibilities
-    position_lenghts = [(position, len(value)) for position, value in values.items() if len(value) > 1]
-    position_lenghts.sort(key=lambda x: x[1])
+    position_lengths = [(position, len(value)) for position, value in values.items() if len(value) > 1]
+    position_lengths.sort(key=lambda x: x[1])
 
-    if len(position_lenghts) == 0:
+    if len(position_lengths) == 0:
         return values
 
     found = False
-    while found is False and len(position_lenghts) > 0:
-        choice_position = position_lenghts.pop(0)[0]
+    while found is False and len(position_lengths) > 0:
+        choice_position = position_lengths.pop(0)[0]
         i = 0
         choice_value = values[choice_position]
         while found is False and i < len(choice_value):
