@@ -1,5 +1,4 @@
-import itertools
-
+import copy
 from utils import *
 
 row_units = [cross(r, cols) for r in rows]
@@ -53,16 +52,16 @@ def naked_twins(values):
     Pseudocode for this algorithm on github:
     https://github.com/udacity/artificial-intelligence/blob/master/Projects/1_Sudoku/pseudocode.md
     """
-    out = values.copy()
-    for boxA in values.keys():
-        for boxB in peers[boxA]:
-            if len(values[boxA]) == 2 and sorted(values[boxA]) == sorted(values[boxB]):
-                for peer in [peer for peer in peers[boxA] if peer in peers[boxB]]:
-                    for digit in values[boxA]:
-                        new_value = out[peer].replace(digit, '')
-                        out[peer] = new_value
+    two_item_boxes = [box for box in values if len(values[box]) == 2]
+    twins = [(boxA, boxB) for boxA in two_item_boxes for boxB in peers[boxA] if
+             values[boxA] == values[boxB]]
+    for twin1, twin2 in twins:
+        common_peers = set(peers[twin1]).intersection(peers[twin2])
+        for peer in common_peers:
+            for current_value in values[twin1]:
+                values[peer] = values[peer].replace(current_value, '')
 
-    return out
+    return values
 
 
 def eliminate(values):
@@ -83,9 +82,7 @@ def eliminate(values):
     """
 
     for position, value in values.items():
-        peers_positions = peers[position]
-
-        single_value_peers = set(values[e] for e in peers_positions if len(values[e]) == 1)
+        single_value_peers = set(values[e] for e in peers[position] if len(values[e]) == 1)
         clean_value = ''.join([e for e in value if e not in single_value_peers])
         values[position] = clean_value
 
@@ -138,15 +135,14 @@ def reduce_puzzle(values):
     """
     stalled = False
     while not stalled:
-        # Check how many boxes have a determined value
         solved_values_before = len([box for box in values.keys() if len(values[box]) == 1])
 
         values = eliminate(values)
         values = only_choice(values)
         values = naked_twins(values)
+
         solved_values_after = len([box for box in values.keys() if len(values[box]) == 1])
         stalled = solved_values_before == solved_values_after
-
         if len([box for box in values.keys() if len(values[box]) == 0]):
             return False
     return values
@@ -171,28 +167,26 @@ def search(values):
     You should be able to complete this function by copying your code from the classroom
     and extending it to call the naked twins strategy.
     """
-    new_values = reduce_puzzle(values)
-    if new_values is False:
+    values = reduce_puzzle(values)
+    if values is False:
         return False
+
+    if all(len(value) == 1 for value in values.values()):
+        return values
 
     # Choose one of the unfilled squares with the fewest possibilities
     position_lengths = [(position, len(value)) for position, value in values.items() if len(value) > 1]
     position_lengths.sort(key=lambda x: x[1])
 
-    if len(position_lengths) == 0:
-        return values
-
     found = False
-    while found is False and len(position_lengths) > 0:
-        choice_position = position_lengths.pop(0)[0]
-        i = 0
+    for choice_position, _ in position_lengths:
         choice_value = values[choice_position]
-        while found is False and i < len(choice_value):
-            chosen_value = choice_value[i]
-            new_values = values.copy()
+        for chosen_value in choice_value:
+            new_values = copy.deepcopy(values)
             new_values[choice_position] = chosen_value
             found = search(new_values)
-            i += 1
+            if found:
+                return found
 
     return found
 
@@ -213,8 +207,8 @@ def solve(grid):
         The dictionary representation of the final sudoku grid or False if no solution exists.
     """
     values = grid2values(grid)
-    values = search(values)
-    return values
+    answer = search(values)
+    return answer
 
 
 if __name__ == "__main__":
