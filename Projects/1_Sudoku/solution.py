@@ -171,6 +171,8 @@ def search(values):
     if values is False:
         return False
 
+    # assert all(len(value) >= 1 for value in values.values()), "there are invalid values"
+
     if all(len(value) == 1 for value in values.values()):
         return values
 
@@ -179,7 +181,7 @@ def search(values):
     position_lengths.sort(key=lambda x: x[1])
 
     found = False
-    for choice_position, _ in position_lengths:
+    for choice_position, _ in position_lengths[0:1]:
         choice_value = values[choice_position]
         for chosen_value in choice_value:
             new_values = copy.deepcopy(values)
